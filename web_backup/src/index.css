@@ -1,0 +1,142 @@
+:root {
+  --primary-color: #007bff; /* Vibrant Blue for Water/Brand */
+  --secondary-color: #ff6b6b; /* Soft Red for Ice Cream accent or Delete */
+  --accent-color: #ffd166; /* Gold/Yellow for warnings or highlights */
+  --background-dark: #121212;
+  --surface-dark: #1e1e1e;
+  --surface-light: #2c2c2c;
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaaa;
+  --success-color: #06d6a0;
+  --border-radius: 12px;
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --header-height: 60px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--background-dark);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Layout Utilities */
+.container {
+  max-width: 600px; /* Mobile focused */
+  margin: 0 auto;
+  padding: 20px;
+  min-height: calc(100vh - var(--header-height));
+  padding-bottom: 80px; /* Space for potential bottom nav or just clearance */
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-weight: 700;
+  margin-bottom: 0.5em;
+}
+
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: var(--border-radius);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.2s;
+  width: 100%;
+  font-size: 1rem;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), #0056b3);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--surface-light);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* Cards */
+.card {
+  background-color: var(--surface-dark);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Inputs */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--surface-light);
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  color: white;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* Anim */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
