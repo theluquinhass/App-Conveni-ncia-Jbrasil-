@@ -8,7 +8,7 @@ import { Colors } from '../src/constants/Colors';
 import { useInventory } from '../src/context/InventoryContext';
 
 export default function SalesScreen() {
-    const { sales, resetSales, cash, updateCash } = useInventory();
+    const { sales, resetSales, removeSale, cash, updateCash } = useInventory();
 
     // Security & Inputs
     const [isPasswordOpen, setIsPasswordOpen] = useState(false);
@@ -58,6 +58,16 @@ export default function SalesScreen() {
             );
         } else if (action?.type === 'add_cash' || action?.type === 'remove_cash') {
             setIsValueModalOpen(true);
+        } else if (action?.type === 'cancel_sale') {
+            setPendingAction(null);
+            Alert.alert(
+                'Cancelar Venda',
+                'Tem certeza que deseja cancelar esta venda e devolver o item ao estoque?',
+                [
+                    { text: 'Não', style: 'cancel' },
+                    { text: 'Sim, cancelar', onPress: () => removeSale(action.sale.id) }
+                ]
+            );
         }
     };
 
@@ -73,6 +83,11 @@ export default function SalesScreen() {
 
     const handleCashAction = (type) => {
         setPendingAction({ type });
+        setIsPasswordOpen(true);
+    };
+
+    const handleDeleteSale = (sale) => {
+        setPendingAction({ type: 'cancel_sale', sale });
         setIsPasswordOpen(true);
     };
 
@@ -171,9 +186,14 @@ export default function SalesScreen() {
                                             })}
                                         </Text>
                                     </View>
-                                    <Text style={styles.historyTotal}>
-                                        +{sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                        <Text style={styles.historyTotal}>
+                                            +{sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                        </Text>
+                                        <TouchableOpacity onPress={() => handleDeleteSale(sale)}>
+                                            <Trash2 size={20} color={Colors.danger} />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
                             ))
                         )}

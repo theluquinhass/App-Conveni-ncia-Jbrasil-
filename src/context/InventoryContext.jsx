@@ -118,6 +118,25 @@ export const InventoryProvider = ({ children }) => {
         }
     };
 
+    const removeSale = (saleId) => {
+        const saleToRemove = sales.find(s => s.id === saleId);
+        if (!saleToRemove) return;
+
+        // Restore stock
+        const newProducts = products.map((p) =>
+            p.id === saleToRemove.productId
+                ? { ...p, quantity: Number(p.quantity) + Number(saleToRemove.quantity) }
+                : p
+        );
+        setProducts(newProducts);
+        saveProducts(newProducts);
+
+        // Remove sale
+        const newSales = sales.filter(s => s.id !== saleId);
+        setSales(newSales);
+        saveSales(newSales);
+    };
+
     const updateCash = async (amount) => {
         const newTotal = cash + amount;
         setCash(newTotal);
@@ -155,7 +174,9 @@ export const InventoryProvider = ({ children }) => {
                 updateProduct,
                 deleteProduct,
                 registerSale,
+                registerSale,
                 resetSales,
+                removeSale,
                 moveProduct,
                 getProductsByCategory,
                 cash,
