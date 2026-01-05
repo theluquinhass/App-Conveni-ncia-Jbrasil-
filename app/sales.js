@@ -24,6 +24,10 @@ export default function SalesScreen() {
         .filter(s => s.category === 'sorvete')
         .reduce((acc, s) => acc + s.total, 0);
 
+    // Verify if there are sales for the buttons content
+    const hasWaterSales = sales.some(s => s.category === 'agua');
+    const hasIceSales = sales.some(s => s.category === 'sorvete');
+
     const handleResetClick = (category) => {
         const hasSalesInCategory = category
             ? sales.some(s => s.category === category)
@@ -124,18 +128,18 @@ export default function SalesScreen() {
 
                 <View style={styles.closeRegisterContainer}>
                     <TouchableOpacity
-                        style={[styles.closeBtn, !sales.some(s => s.category === 'agua') && styles.disabledCloseBtn]}
+                        style={[styles.closeBtn, !hasWaterSales && styles.disabledCloseBtn]}
                         onPress={() => handleResetClick('agua')}
-                        disabled={!sales.some(s => s.category === 'agua')}
+                        disabled={!hasWaterSales}
                     >
                         <Trash2 size={16} color="white" style={{ marginRight: 6 }} />
                         <Text style={styles.closeBtnText}>Limpar Água</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.closeBtn, !sales.some(s => s.category === 'sorvete') && styles.disabledCloseBtn]}
+                        style={[styles.closeBtn, !hasIceSales && styles.disabledCloseBtn]}
                         onPress={() => handleResetClick('sorvete')}
-                        disabled={!sales.some(s => s.category === 'sorvete')}
+                        disabled={!hasIceSales}
                     >
                         <Trash2 size={16} color="white" style={{ marginRight: 6 }} />
                         <Text style={styles.closeBtnText}>Limpar Sorvete</Text>
@@ -143,10 +147,10 @@ export default function SalesScreen() {
                 </View>
 
                 {/* Recent Sales List */}
-                <View style={styles.historySection}>
-                    <View style={styles.historyHeader}>
+                <View style={styles.sectionContainer}>
+                    <View style={styles.sectionHeader}>
                         <History size={18} color={Colors.textSecondary} />
-                        <Text style={styles.historyTitle}>Histórico de Vendas</Text>
+                        <Text style={styles.sectionTitle}>Histórico Recente</Text>
                     </View>
 
                     <View style={styles.historyList}>
@@ -276,16 +280,17 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 14,
     },
-    historySection: {
+    sectionContainer: {
         marginTop: 10,
+        marginBottom: 20,
     },
-    historyHeader: {
+    sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
         marginBottom: 10,
     },
-    historyTitle: {
+    sectionTitle: {
         fontSize: 16,
         color: Colors.textSecondary,
         fontWeight: '600',

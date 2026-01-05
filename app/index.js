@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ClipboardCheck, DollarSign, Droplets, IceCream, Settings } from 'lucide-react-native';
+import { ClipboardCheck, DollarSign, Droplets, IceCream, Package, Settings } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -73,8 +73,15 @@ export default function Home() {
 
                 <MenuCard
                     title="Caixa"
-                    icon={require('lucide-react-native').BarChart3} // Changing icon to differentiate
+                    icon={require('lucide-react-native').BarChart3}
                     route="/sales"
+                    color="#06d6a0"
+                />
+
+                <MenuCard
+                    title="Resumo de Vendas"
+                    icon={Package}
+                    route="/summary"
                     color="#06d6a0"
                 />
 
@@ -169,5 +176,5 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: Colors.border,
         marginVertical: 20,
-    }
+    },
 });
