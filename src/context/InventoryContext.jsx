@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const InventoryContext = createContext();
 
@@ -19,10 +19,12 @@ export const InventoryProvider = ({ children }) => {
 
     const loadData = async () => {
         try {
-            const savedProducts = await AsyncStorage.getItem('jbrasil-inventory');
-            const savedSales = await AsyncStorage.getItem('jbrasil-sales');
-            const savedCash = await AsyncStorage.getItem('jbrasil-cash');
-            const savedPassword = await AsyncStorage.getItem('jbrasil-password');
+            const [savedProducts, savedSales, savedCash, savedPassword] = await Promise.all([
+                AsyncStorage.getItem('jbrasil-inventory'),
+                AsyncStorage.getItem('jbrasil-sales'),
+                AsyncStorage.getItem('jbrasil-cash'),
+                AsyncStorage.getItem('jbrasil-password')
+            ]);
 
             if (savedProducts) setProducts(JSON.parse(savedProducts));
             if (savedSales) setSales(JSON.parse(savedSales));
@@ -82,25 +84,33 @@ export const InventoryProvider = ({ children }) => {
     };
 
     const registerSale = (product, quantity) => {
-        // Deduct stock
-        const newProducts = products.map((p) =>
-            p.id === product.id ? { ...p, quantity: Number(p.quantity) - Number(quantity) } : p
-        );
+        registerBatchSales([{ ...product, cartQty: quantity }]);
+    };
+
+    const registerBatchSales = (items) => {
+        // 1. Deduct Stock for all items
+        const newProducts = products.map(p => {
+            const itemInCart = items.find(i => i.id === p.id);
+            if (itemInCart) {
+                return { ...p, quantity: Number(p.quantity) - Number(itemInCart.cartQty) };
+            }
+            return p;
+        });
         setProducts(newProducts);
         saveProducts(newProducts);
 
-        // Record sale
-        const sale = {
-            id: Date.now().toString(),
-            productId: product.id,
-            productName: product.name,
-            category: product.category,
-            quantity: Number(quantity),
-            total: Number(product.price) * Number(quantity),
+        // 2. Create Sales Records
+        const newSalesItems = items.map((item, index) => ({
+            id: (Date.now() + index).toString(), // Ensure unique IDs
+            productId: item.id,
+            productName: item.name,
+            category: item.category,
+            quantity: Number(item.cartQty),
+            total: Number(item.price) * Number(item.cartQty),
             date: new Date().toISOString()
-        };
+        }));
 
-        const newSales = [sale, ...sales];
+        const newSales = [...newSalesItems, ...sales];
         setSales(newSales);
         saveSales(newSales);
     };
@@ -162,27 +172,27 @@ export const InventoryProvider = ({ children }) => {
         return products.filter((p) => p.category === category);
     };
 
+    const contextValue = useMemo(() => ({
+        products,
+        sales,
+        loading,
+        password,
+        updatePassword,
+        addProduct,
+        updateProduct,
+        deleteProduct,
+        registerSale,
+        registerBatchSales,
+        resetSales,
+        removeSale,
+        moveProduct,
+        getProductsByCategory,
+        cash,
+        updateCash,
+    }), [products, sales, loading, password, cash]);
+
     return (
-        <InventoryContext.Provider
-            value={{
-                products,
-                sales,
-                loading,
-                password,
-                updatePassword,
-                addProduct,
-                updateProduct,
-                deleteProduct,
-                registerSale,
-                registerSale,
-                resetSales,
-                removeSale,
-                moveProduct,
-                getProductsByCategory,
-                cash,
-                updateCash,
-            }}
-        >
+        <InventoryContext.Provider value={contextValue}>
             {children}
         </InventoryContext.Provider>
     );

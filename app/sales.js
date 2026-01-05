@@ -1,6 +1,6 @@
 import { History, Minus, Plus, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import PasswordModal from '../src/components/PasswordModal';
 import ValueModal from '../src/components/ValueModal';
@@ -14,19 +14,52 @@ export default function SalesScreen() {
     const [isPasswordOpen, setIsPasswordOpen] = useState(false);
     const [isValueModalOpen, setIsValueModalOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState(null); // { type: 'reset'|'add_cash'|'remove_cash', category?: string }
+    const [filter, setFilter] = useState('all'); // 'all' | 'agua' | 'sorvete'
 
-    // Stats
-    const totalWater = (sales ?? [])
+    // Memoized Grouping Logic
+    const groupedSales = useMemo(() => {
+        const filtered = sales.filter(s => filter === 'all' || s.category === filter);
+
+        const grouped = {};
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+        filtered.forEach(sale => {
+            const date = new Date(sale.date);
+            const dateStr = date.toDateString();
+
+            let label = date.toLocaleDateString('pt-BR');
+            if (dateStr === today) label = 'Hoje';
+            else if (dateStr === yesterday) label = 'Ontem';
+
+            if (!grouped[label]) grouped[label] = [];
+            grouped[label].push(sale);
+        });
+
+        // Use localized sort or simple reverse chronological
+        return Object.entries(grouped)
+            .map(([title, data]) => ({ title, data }))
+            .sort((a, b) => {
+                // Simple heuristic: 'Hoje' first, 'Ontem' second, then dates
+                if (a.title === 'Hoje') return -1;
+                if (b.title === 'Hoje') return 1;
+                if (a.title === 'Ontem') return -1;
+                if (b.title === 'Ontem') return 1;
+                return 0; // Keep original order for others usually (or proper date parsing if needed)
+            });
+    }, [sales, filter]);
+
+    // Memoized Stats
+    const totalWater = useMemo(() => (sales ?? [])
         .filter(s => s.category === 'agua')
-        .reduce((acc, s) => acc + s.total, 0);
+        .reduce((acc, s) => acc + s.total, 0), [sales]);
 
-    const totalIce = (sales ?? [])
+    const totalIce = useMemo(() => (sales ?? [])
         .filter(s => s.category === 'sorvete')
-        .reduce((acc, s) => acc + s.total, 0);
+        .reduce((acc, s) => acc + s.total, 0), [sales]);
 
-    // Verify if there are sales for the buttons content
-    const hasWaterSales = sales.some(s => s.category === 'agua');
-    const hasIceSales = sales.some(s => s.category === 'sorvete');
+    const hasWaterSales = useMemo(() => sales.some(s => s.category === 'agua'), [sales]);
+    const hasIceSales = useMemo(() => sales.some(s => s.category === 'sorvete'), [sales]);
 
     const handleResetClick = (category) => {
         const hasSalesInCategory = category
@@ -91,115 +124,129 @@ export default function SalesScreen() {
         setIsPasswordOpen(true);
     };
 
-    return (
-        <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-            <ScrollView contentContainerStyle={styles.content}>
-
-                {/* Cashier Dashboard */}
-                <View style={styles.dashboard}>
-                    <View style={styles.row}>
-                        <View style={styles.statItem}>
-                            <Text style={[styles.statLabel, { color: Colors.primary }]}>Água</Text>
-                            <Text style={styles.statValue}>
-                                {totalWater.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </Text>
-                        </View>
-                        <View style={styles.verticalDivider} />
-                        <View style={styles.statItem}>
-                            <Text style={[styles.statLabel, { color: Colors.secondary }]}>Sorvete</Text>
-                            <Text style={styles.statValue}>
-                                {totalIce.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </Text>
-                        </View>
+    const renderHeader = () => (
+        <View style={styles.headerContainer}>
+            {/* Cashier Dashboard */}
+            <View style={styles.dashboard}>
+                <View style={styles.row}>
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statLabel, { color: Colors.primary }]}>Água</Text>
+                        <Text style={styles.statValue}>
+                            {totalWater.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </Text>
                     </View>
-
-                    <View style={styles.horizontalDivider} />
-
-                    <View style={styles.cashStatItem}>
-                        <Text style={[styles.statLabel, { color: Colors.success }]}>Saldo em Caixa</Text>
-                        <Text style={styles.cashStatValue}>
-                            {(cash || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    <View style={styles.verticalDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statLabel, { color: Colors.secondary }]}>Sorvete</Text>
+                        <Text style={styles.statValue}>
+                            {totalIce.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </Text>
                     </View>
                 </View>
 
-                <View style={[styles.closeRegisterContainer, { marginBottom: 10 }]}>
-                    <TouchableOpacity
-                        style={[styles.closeBtn, { backgroundColor: Colors.success }]}
-                        onPress={() => handleCashAction('add_cash')}
-                    >
-                        <Plus size={16} color="white" style={{ marginRight: 6 }} />
-                        <Text style={styles.closeBtnText}>Adicionar $</Text>
-                    </TouchableOpacity>
+                <View style={styles.horizontalDivider} />
 
-                    <TouchableOpacity
-                        style={[styles.closeBtn, { backgroundColor: Colors.danger }]}
-                        onPress={() => handleCashAction('remove_cash')}
-                    >
-                        <Minus size={16} color="white" style={{ marginRight: 6 }} />
-                        <Text style={styles.closeBtnText}>Retirar $</Text>
-                    </TouchableOpacity>
+                <View style={styles.cashStatItem}>
+                    <Text style={[styles.statLabel, { color: Colors.success }]}>Saldo em Caixa</Text>
+                    <Text style={styles.cashStatValue}>
+                        {(cash || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </Text>
                 </View>
+            </View>
 
-                <View style={styles.closeRegisterContainer}>
+            <View style={[styles.closeRegisterContainer, { marginBottom: 10 }]}>
+                <TouchableOpacity
+                    style={[styles.closeBtn, { backgroundColor: Colors.success }]}
+                    onPress={() => handleCashAction('add_cash')}
+                >
+                    <Plus size={16} color="white" style={{ marginRight: 6 }} />
+                    <Text style={styles.closeBtnText}>Adicionar $</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.closeBtn, { backgroundColor: Colors.danger }]}
+                    onPress={() => handleCashAction('remove_cash')}
+                >
+                    <Minus size={16} color="white" style={{ marginRight: 6 }} />
+                    <Text style={styles.closeBtnText}>Retirar $</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.closeRegisterContainer}>
+                <TouchableOpacity
+                    style={[styles.closeBtn, !hasWaterSales && styles.disabledCloseBtn]}
+                    onPress={() => handleResetClick('agua')}
+                    disabled={!hasWaterSales}
+                >
+                    <Trash2 size={16} color="white" style={{ marginRight: 6 }} />
+                    <Text style={styles.closeBtnText}>Limpar Água</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.closeBtn, !hasIceSales && styles.disabledCloseBtn]}
+                    onPress={() => handleResetClick('sorvete')}
+                    disabled={!hasIceSales}
+                >
+                    <Trash2 size={16} color="white" style={{ marginRight: 6 }} />
+                    <Text style={styles.closeBtnText}>Limpar Sorvete</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.sectionHeader}>
+                <History size={18} color={Colors.textSecondary} />
+                <Text style={styles.sectionTitle}>Histórico de Vendas</Text>
+            </View>
+
+            {/* Filter Tabs */}
+            <View style={styles.filterContainer}>
+                {['all', 'agua', 'sorvete'].map((f) => (
                     <TouchableOpacity
-                        style={[styles.closeBtn, !hasWaterSales && styles.disabledCloseBtn]}
-                        onPress={() => handleResetClick('agua')}
-                        disabled={!hasWaterSales}
+                        key={f}
+                        style={[styles.filterBtn, filter === f && styles.activeFilterBtn]}
+                        onPress={() => setFilter(f)}
                     >
-                        <Trash2 size={16} color="white" style={{ marginRight: 6 }} />
-                        <Text style={styles.closeBtnText}>Limpar Água</Text>
+                        <Text style={[styles.filterText, filter === f && styles.activeFilterText]}>
+                            {f === 'all' ? 'Todos' : f === 'agua' ? 'Água' : 'Sorvete'}
+                        </Text>
                     </TouchableOpacity>
+                ))}
+            </View>
+        </View>
+    );
 
-                    <TouchableOpacity
-                        style={[styles.closeBtn, !hasIceSales && styles.disabledCloseBtn]}
-                        onPress={() => handleResetClick('sorvete')}
-                        disabled={!hasIceSales}
-                    >
-                        <Trash2 size={16} color="white" style={{ marginRight: 6 }} />
-                        <Text style={styles.closeBtnText}>Limpar Sorvete</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Recent Sales List */}
-                <View style={styles.sectionContainer}>
-                    <View style={styles.sectionHeader}>
-                        <History size={18} color={Colors.textSecondary} />
-                        <Text style={styles.sectionTitle}>Histórico Recente</Text>
+    return (
+        <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+            <SectionList
+                sections={groupedSales}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                    <View style={styles.historyItem}>
+                        <View>
+                            <Text style={styles.historyText}>{item.quantity}x {item.productName}</Text>
+                            <Text style={styles.historyDate}>
+                                {new Date(item.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={styles.historyTotal}>
+                                +{item.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </Text>
+                            <TouchableOpacity onPress={() => handleDeleteSale(item)}>
+                                <Trash2 size={20} color={Colors.danger} />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-
-                    <View style={styles.historyList}>
-                        {sales.length === 0 ? (
-                            <Text style={styles.emptyHistory}>Nenhuma venda registrada.</Text>
-                        ) : (
-                            sales.map(sale => (
-                                <View key={sale.id} style={styles.historyItem}>
-                                    <View>
-                                        <Text style={styles.historyText}>{sale.quantity}x {sale.productName}</Text>
-                                        <Text style={styles.historyDate}>
-                                            {new Date(sale.date).toLocaleString('pt-BR', {
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            })}
-                                        </Text>
-                                    </View>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                        <Text style={styles.historyTotal}>
-                                            +{sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                                        </Text>
-                                        <TouchableOpacity onPress={() => handleDeleteSale(sale)}>
-                                            <Trash2 size={20} color={Colors.danger} />
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            ))
-                        )}
-                    </View>
-                </View>
-            </ScrollView>
+                )}
+                renderSectionHeader={({ section: { title } }) => (
+                    <Text style={styles.groupTitle}>{title}</Text>
+                )}
+                ListHeaderComponent={renderHeader}
+                ListEmptyComponent={
+                    <Text style={styles.emptyHistory}>Nenhuma venda registrada.</Text>
+                }
+                contentContainerStyle={styles.content}
+                stickySectionHeadersEnabled={false}
+            />
 
             <PasswordModal
                 isOpen={isPasswordOpen}
@@ -230,6 +277,9 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
         paddingBottom: 40,
+    },
+    headerContainer: {
+        marginBottom: 10,
     },
     dashboard: {
         backgroundColor: Colors.surface,
@@ -349,5 +399,38 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginTop: 20,
+    },
+    filterContainer: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 16,
+    },
+    filterBtn: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        backgroundColor: Colors.surface,
+        borderWidth: 1,
+        borderColor: Colors.border,
+    },
+    activeFilterBtn: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    filterText: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        fontWeight: '600',
+    },
+    activeFilterText: {
+        color: 'white',
+    },
+    groupTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: Colors.textSecondary,
+        marginTop: 10,
+        marginBottom: 8,
+        textTransform: 'uppercase',
     },
 });
